@@ -123,6 +123,114 @@ app.get("/movieslist", async (req, res) => {
   }
 });
 
+app.post("/updatewatchlist", async (req, res) => {
+  try {
+    const client = await mongoClient.connect(DB_URL);
+    const db = client.db("UserDB");
+
+    const result = await db
+      .collection("users")
+      .update(
+        { username: req.body.username },
+        { $push: { watchlist: req.body.moviename } }
+      );
+    res.send({
+      status: "Added to watchlist!",
+    });
+    client.close();
+  } catch (err) {
+    res.send({
+      status: "Unable to add to watch list. Retry once.",
+    });
+    client.close();
+  }
+});
+
+app.post("/updatelikedlist", async (req, res) => {
+  try {
+    const client = await mongoClient.connect(DB_URL);
+    const db = client.db("UserDB");
+
+    const result = await db
+      .collection("users")
+      .update(
+        { username: req.body.username },
+        { $push: { likedmovies: req.body.moviename } }
+      );
+    res.send({
+      status: "Added to your list!",
+    });
+    client.close();
+  } catch (err) {
+    res.send({
+      status: "Unable to add to your list. Retry once.",
+    });
+    client.close();
+  }
+});
+
+app.post("/getwatchlist", async (req, res) => {
+  try {
+    const client = await mongoClient.connect(DB_URL);
+
+    const db1 = client.db("UserDB");
+
+    const watchList = await db1
+      .collection("users")
+      .find({ username: req.body.username })
+      .project({ _id: 0, watchlist: 1 })
+      .toArray();
+
+    if (Object.keys(watchList[0]).length > 0) {
+      const db2 = client.db("MovieDB");
+
+      const result = await db2
+        .collection("Movies")
+        .find({ name: { $in: watchList[0].watchlist } })
+        .toArray();
+
+      res.send({ status: "success", data: result });
+    } else {
+      res.send({ status: "no data" });
+    }
+    client.close();
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+});
+
+app.post("/getlikedlist", async (req, res) => {
+  try {
+    const client = await mongoClient.connect(DB_URL);
+
+    const db1 = client.db("UserDB");
+
+    const likedList = await db1
+      .collection("users")
+      .find({ username: req.body.username })
+      .project({ _id: 0, likedmovies: 1 })
+      .toArray();
+
+    if (Object.keys(likedList[0]).length > 0) {
+      const db2 = client.db("MovieDB");
+
+      const result = await db2
+        .collection("Movies")
+        .find({ name: { $in: likedList[0].likedmovies } })
+        .toArray();
+
+      res.send({ status: "success", data: result });
+    } else {
+      res.send({ status: "no data" });
+    }
+    client.close();
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+});
+
 app.listen(port, () => {
   console.log(`::::  Server started and running on port ${port} ::::`);
 });
